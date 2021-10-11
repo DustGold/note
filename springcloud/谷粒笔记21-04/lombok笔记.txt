@@ -1,0 +1,305 @@
+
+
+
+
+在类上@Data可以省略getter..setter
+
+Lombok原理：
+
+JSR 269 ：插件化注解处理API
+
+JDK提供的特性，在javac编译器利用注解搞事情，如spring注解
+
+```java
+@SpringBootApplication是runtime的
+    而@Data是SOURCE阶段
+```
+
+- runtime：虚拟机里执行的时候才生效
+- JSR 269在编译阶段
+
+![](https://fermhan.oss-cn-qingdao.aliyuncs.com/img/20200714225154.png)
+
+加上@Data后，可以在target文件夹里看到对应的类以及有getter、setter
+
+安装：
+
+maven
+
+```xml
+<dependency>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+    <version>1.18.12</version>
+    <scope>provided</scope>
+</dependency>
+
+```
+
+此外，还需要在IDEA中安装Lombok插件。
+
+无果不安装插件的话，在IDEA的Structure中是看不到getter...setter的，安装了插件才能看到。
+
+所以IDEA必须安装插件，否则编写代码的时期就报错了。
+
+但class文件里的getter、setter是存在的，也就说是编译的时候是通过Lombok的包的
+
+#### 常用注解
+
+- @Getter/@Setter：可以设置AcessLvel.PROTECTED等，AcessLvel.NONE代表不生成。会自动忽略static
+- @Tostring，可以使用exclude排除字段，of为包含字段。同样没有static的
+- @EqualsAndHashCode：equals()+canEqual()+hashCode()
+- @NonNull：参数/字段不允许为空
+- @NoArgConstructor/@RequiredArgsConstructor指定参数NOtNull+Final/@AllArgsConstructor。@NotNull final如果没有参数的话一定得在构造器中传入参数 
+- @Data：多个注解的组合：@Getter/@Setter+@Tostring+@EqualsAndHashCode+/@RequiredArgsConstructor
+- @Builder
+- @Log：log.info()
+- val：val = new HashMap<int,String>();
+- @Cleanup：清理流。@Cleanup InputStream in= new FileInputSteam("filepath")
+
+```java
+@Builder(toBuilder = true)
+@Getter
+public class UserInfo {
+  private String name;
+  private String email;
+  @MinMoney(message = "金额不能小于0.")
+  @MaxMoney(value = 10, message = "金额不能大于10.")
+  private Money price;
+
+}
+```
+
+**@Builder注解赋值新对象**
+
+```java
+UserInfo userInfo = UserInfo.builder()
+        .name("zzl")
+        .email("bgood@sina.com")
+        .build();
+```
+
+**@Builder注解修改原对象的属性值**
+
+修改实体，要求实体上添加@Builder(toBuilder=true)
+
+```java
+ userInfo = userInfo.toBuilder()
+        .name("OK")
+        .email("zgood@sina.com")
+        .build();
+```
+
+
+
+
+
+这里对lombok的@Builder和@Data组合的使用示例
+
+```java
+import lombok.Builder;
+import lombok.Data;
+
+@Data
+@Builder
+public class People {
+    private String name;
+    private String sex;
+    private int age;
+}
+
+
+@Test
+public void test(){
+    People.PeopleBuilder builder = People.builder();
+    People.PeopleBuilder peopleBuilder = builder.name("LuoTianyan").age(23);
+    if(true){
+        peopleBuilder.sex("female");
+    }
+    People luoTianyan = peopleBuilder.build();
+    System.out.println(luoTianyan.toString());
+    //People(name=LuoTianyan, sex=female, age=23)
+
+    People people = new People("LuoTianyan","female",23);
+    System.out.println(luoTianyan.equals(people));
+    //true
+}
+```
+
+class People加上了@Builder和@Data注解后，多了一个静态内部类PeopleBuilder，People调用静态方法builder生成PeopleBuilder对象，PeopleBuilder可以使用".属性名(属性值)"的方式进行属性设置，再调用build()方法就生成了People对象，并且如果两个对象的属性如果相同，就会认为这两个对象相等，即重写了hashCode和equls方法。
+
+ 
+
+在Intellij IDEA下，查看反编译的文件People.class；
+
+可以看到，生成的有：
+
+Getter和Setter方法；
+
+访问类型是private无参构造方法，访问类型为defaul的全部参数的构造方法；
+
+重写hashCode、equals、toString方法，则People可以做为Map的key；
+
+访问类型为public的静态方法builder，返回的是People.PeopleBuilder对象，非单例；
+
+访问类型为public的静态内部类PeopleBuilder，该类主要有build方法，返回类型是People；
+
+最后还有个canEqual方法，判断是否与People同类型。
+
+ 
+
+```java
+//
+// Source code recreated from a .class file by IntelliJ IDEA
+// (powered by Fernflower decompiler)
+//
+
+
+public class People {
+    private String name;
+    private String sex;
+    private int age;
+
+    People(String name, String sex, int age) {
+        this.name = name;
+        this.sex = sex;
+        this.age = age;
+    }
+
+    public static People.PeopleBuilder builder() {
+        return new People.PeopleBuilder();
+    }
+
+    private People() {
+    }
+
+    public String getName() {
+        return this.name;
+    }
+
+    public String getSex() {
+        return this.sex;
+    }
+
+    public int getAge() {
+        return this.age;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setSex(String sex) {
+        this.sex = sex;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public boolean equals(Object o) {
+        if (o == this) {
+            return true;
+        } else if (!(o instanceof People)) {
+            return false;
+        } else {
+            People other = (People)o;
+            if (!other.canEqual(this)) {
+                return false;
+            } else {
+                label39: {
+                    Object this$name = this.getName();
+                    Object other$name = other.getName();
+                    if (this$name == null) {
+                        if (other$name == null) {
+                            break label39;
+                        }
+                    } else if (this$name.equals(other$name)) {
+                        break label39;
+                    }
+
+                    return false;
+                }
+
+                Object this$sex = this.getSex();
+                Object other$sex = other.getSex();
+                if (this$sex == null) {
+                    if (other$sex != null) {
+                        return false;
+                    }
+                } else if (!this$sex.equals(other$sex)) {
+                    return false;
+                }
+
+                if (this.getAge() != other.getAge()) {
+                    return false;
+                } else {
+                    return true;
+                }
+            }
+        }
+    }
+
+    protected boolean canEqual(Object other) {
+        return other instanceof People;
+    }
+
+    public int hashCode() {
+        int PRIME = true;
+        int result = 1;
+        Object $name = this.getName();
+        int result = result * 59 + ($name == null ? 43 : $name.hashCode());
+        Object $sex = this.getSex();
+        result = result * 59 + ($sex == null ? 43 : $sex.hashCode());
+        result = result * 59 + this.getAge();
+        return result;
+    }
+
+    public String toString() {
+        return "People(name=" + this.getName() + ", sex=" + this.getSex() + ", age=" + this.getAge() + ")";
+    }
+
+    public static class PeopleBuilder {
+        private String name;
+        private String sex;
+        private int age;
+
+        PeopleBuilder() {
+        }
+
+        public People.PeopleBuilder name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public People.PeopleBuilder sex(String sex) {
+            this.sex = sex;
+            return this;
+        }
+
+        public People.PeopleBuilder age(int age) {
+            this.age = age;
+            return this;
+        }
+
+        public People build() {
+            return new People(this.name, this.sex, this.age);
+        }
+
+        public String toString() {
+            return "People.PeopleBuilder(name=" + this.name + ", sex=" + this.sex + ", age=" + this.age + ")";
+        }
+    }
+}
+```
+
+
+
+
+
+
+
+
+
+
+
